@@ -42,16 +42,18 @@ const NeuralNetworkVisual: React.FC<NeuralNetworkVisualProps> = ({ level = 1, po
     const baseNumPoints = 20;
     // Add more points as level increases
     const numPoints = baseNumPoints + (level * 5);
-    const points: Point[] = [];
+    const networkPoints: Point[] = [];
     
     // Calculate how many nodes should be active based on current points
-    const activeNodesPercentage = Math.min(0.8, (level * 0.2)) + (points / 5000);
+    // Convert points to a number to ensure we can use it in arithmetic operations
+    const pointsValue = Number(points);
+    const activeNodesPercentage = Math.min(0.8, (level * 0.2)) + (pointsValue / 5000);
     
     for (let i = 0; i < numPoints; i++) {
       // Make some nodes active based on level and points
       const isActive = Math.random() < activeNodesPercentage;
       
-      points.push({
+      networkPoints.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
         vx: (Math.random() - 0.5) * 0.5,
@@ -67,8 +69,8 @@ const NeuralNetworkVisual: React.FC<NeuralNetworkVisualProps> = ({ level = 1, po
       const numConnections = Math.floor(Math.random() * Math.max(2, level)) + 1;
       for (let j = 0; j < numConnections; j++) {
         const connectionIndex = Math.floor(Math.random() * numPoints);
-        if (connectionIndex !== i && !points[i].connections.includes(connectionIndex)) {
-          points[i].connections.push(connectionIndex);
+        if (connectionIndex !== i && !networkPoints[i].connections.includes(connectionIndex)) {
+          networkPoints[i].connections.push(connectionIndex);
         }
       }
     }
@@ -79,7 +81,7 @@ const NeuralNetworkVisual: React.FC<NeuralNetworkVisualProps> = ({ level = 1, po
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
       // Update point positions
-      points.forEach((point) => {
+      networkPoints.forEach((point) => {
         point.x += point.vx;
         point.y += point.vy;
         
@@ -88,9 +90,9 @@ const NeuralNetworkVisual: React.FC<NeuralNetworkVisualProps> = ({ level = 1, po
       });
       
       // Draw connections
-      points.forEach((point, i) => {
+      networkPoints.forEach((point, i) => {
         point.connections.forEach((connectionIndex) => {
-          const connectedPoint = points[connectionIndex];
+          const connectedPoint = networkPoints[connectionIndex];
           const isActiveConnection = point.active && connectedPoint.active;
           
           ctx.beginPath();
@@ -110,7 +112,7 @@ const NeuralNetworkVisual: React.FC<NeuralNetworkVisualProps> = ({ level = 1, po
       });
       
       // Draw points
-      points.forEach((point) => {
+      networkPoints.forEach((point) => {
         const gradient = ctx.createRadialGradient(
           point.x, point.y, 0, 
           point.x, point.y, point.size * 2
