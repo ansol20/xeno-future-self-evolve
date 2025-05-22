@@ -7,6 +7,7 @@ import RewardSystem from './RewardSystem';
 import XenoAssistant from './XenoAssistant';
 import RoutineManager from './RoutineManager';
 import MissionTracker from './MissionTracker';
+import NeuralAvatar from './NeuralAvatar';
 
 const Dashboard: React.FC = () => {
   // Habits state
@@ -163,6 +164,9 @@ const Dashboard: React.FC = () => {
             <p className="text-sm text-gray-300">Tu asistente para el yo del futuro</p>
           </div>
           
+          {/* Neural Avatar (New) */}
+          <NeuralAvatar points={points} level={level} userName="XENO" />
+          
           {/* Calendar */}
           <XenoCalendar currentDate={new Date()} />
           
@@ -176,7 +180,7 @@ const Dashboard: React.FC = () => {
           {/* Habits Tracker */}
           <HabitTracker habits={habits} onHabitProgress={handleHabitProgress} />
           
-          {/* Mission Tracker (New) */}
+          {/* Mission Tracker */}
           <MissionTracker missions={missions} onToggleMission={handleToggleMission} />
           
           {/* Reward System */}
