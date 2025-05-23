@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,26 +17,70 @@ const XenoAssistant: React.FC = () => {
     { id: 1, text: "Hola, soy XENO. ¿En qué puedo ayudarte a convertirte en tu yo del futuro?", sender: 'xeno' },
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const [messageId, setMessageId] = useState(2);
   const [webhookUrl] = useState('https://n8n.klave.ec/webhook-test/2c7b008d-07f0-4f07-91c9-6f61c7903b12');
+  const [responseUrl] = useState('http://172.23.0.5:8080/message/sendText/');
 
   const sendToN8n = async (message: string) => {
     try {
       setIsLoading(true);
+      
+      // Configurar el cuerpo de la petición
+      const body = {
+        message,
+        timestamp: new Date().toISOString(),
+        source: 'XENO Assistant',
+        instance: message // Enviamos el mensaje como instancia para la URL de respuesta
+      };
+
+      // Enviar mensaje a n8n
       const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         mode: 'no-cors', // Para evitar problemas de CORS
-        body: JSON.stringify({ 
-          message,
-          timestamp: new Date().toISOString(),
-          source: 'XENO Assistant'
-        }),
+        body: JSON.stringify(body),
       });
       
-      console.log('Mensaje enviado a n8n');
-      return true;
+      console.log('Mensaje enviado a n8n:', body);
+
+      // Intentamos obtener una respuesta del endpoint especificado
+      try {
+        const encodedInstance = encodeURIComponent(message);
+        const fullResponseUrl = `${responseUrl}${encodedInstance}`;
+        
+        console.log('Solicitando respuesta de:', fullResponseUrl);
+        
+        const xresp = await fetch(fullResponseUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+        
+        if (xresp.ok) {
+          const responseData = await xresp.json();
+          console.log('Respuesta recibida:', responseData);
+          
+          // Añadir la respuesta real como mensaje de XENO
+          const xenoResponse: Message = {
+            id: messageId + 1,
+            text: responseData.text || responseData.message || "He recibido tu mensaje y lo estoy procesando.",
+            sender: 'xeno',
+          };
+          
+          setMessageId(messageId + 2);
+          setMessages(prev => [...prev, xenoResponse]);
+          return true;
+        } else {
+          console.log('La respuesta no fue satisfactoria:', xresp.status);
+          return false;
+        }
+      } catch (respError) {
+        console.error('Error al obtener respuesta:', respError);
+        return false;
+      }
     } catch (error) {
       console.error('Error al enviar mensaje a n8n:', error);
       toast({
@@ -53,9 +97,12 @@ const XenoAssistant: React.FC = () => {
   const handleSendMessage = async () => {
     if (!inputText.trim() || isLoading) return;
     
+    const nextId = messageId;
+    setMessageId(messageId + 1);
+    
     // Add user message
     const newUserMessage: Message = {
-      id: messages.length + 1,
+      id: nextId,
       text: inputText,
       sender: 'user',
     };
@@ -66,33 +113,24 @@ const XenoAssistant: React.FC = () => {
     const userInput = inputText;
     setInputText('');
     
-    // Send to n8n webhook
+    // Send to n8n webhook and get response
     const sent = await sendToN8n(userInput);
     
-    // Simulate XENO response
-    setTimeout(() => {
-      let responseText = "";
-      
-      if (sent) {
-        const xenoResponses = [
-          "Estoy procesando tu mensaje a través de mi red neuronal externa.",
-          "He enviado tu consulta a mi sistema de procesamiento avanzado.",
-          "Analizando tu solicitud con mi agente inteligente.",
-          "Conectando con mi módulo de procesamiento para darte la mejor respuesta.",
-        ];
-        responseText = xenoResponses[Math.floor(Math.random() * xenoResponses.length)];
-      } else {
-        responseText = "Parece que no puedo conectar con mi agente externo en este momento. ¿Hay algo más en lo que pueda ayudarte?";
-      }
-      
-      const xenoReply: Message = {
-        id: messages.length + 2,
-        text: responseText,
-        sender: 'xeno',
-      };
-      
-      setMessages((prevMessages) => [...prevMessages, xenoReply]);
-    }, 1000);
+    // If we couldn't get a proper response, show a temporary message
+    if (!sent) {
+      setTimeout(() => {
+        const fallbackText = "Parece que no puedo conectar con mi agente externo en este momento. ¿Hay algo más en lo que pueda ayudarte?";
+        
+        const xenoReply: Message = {
+          id: messageId + 1,
+          text: fallbackText,
+          sender: 'xeno',
+        };
+        
+        setMessageId(messageId + 2);
+        setMessages((prevMessages) => [...prevMessages, xenoReply]);
+      }, 1000);
+    }
   };
 
   return (
